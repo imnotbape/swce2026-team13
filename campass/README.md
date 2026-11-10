@@ -37,6 +37,7 @@ npm run dev
 | `DEMO_DATABASE_URL` | 시연 데이터 전용 로컬 `campass_demo` DB |
 | `SQLITE_SOURCE_PATH` | 기존 데이터 이전을 선택할 때 읽을 SQLite 원본 경로 |
 | `ADMIN_ID`, `ADMIN_PASSWORD` | 관리자 아이디와 12자 이상 비밀번호 |
+| `ADMIN_QR_KEY` | 선택. 24자 이상 QR 입장용 값. `/api/admin/qr?key=<값>`으로 열면 로그인 후 `/admin`으로 이동. 시연 후 값을 바꾸면 기존 QR은 무효 |
 | `APP_ORIGIN` | Production 공개 주소. 가변 Preview 도메인에서는 비워 둠 |
 | `VISION_API_URL`, `VISION_API_KEY` | 사진 위치 인식 API (비우면 직접 선택) |
 | `INTENT_API_URL`, `INTENT_API_KEY` | 외부 목적지 해석 API (비우면 키워드 검색) |

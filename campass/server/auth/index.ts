@@ -47,6 +47,23 @@ export async function loginAdmin(
   );
   return db.loginAttempt(key, idMatches && passwordMatches);
 }
+// QR 코드 입장용. ADMIN_QR_KEY(24자 이상)가 설정된 배포에서만 동작하고,
+// 값을 바꾸면 이전에 인쇄한 QR은 바로 무효가 된다. 실패 횟수 제한은 일반 로그인과 같다.
+export async function loginAdminWithQrKey(
+  db: Store,
+  key: string | null,
+  address: string,
+) {
+  const expected = process.env.ADMIN_QR_KEY;
+  if (!expected || expected.length < 24)
+    throw new AppError("QR 입장이 설정되지 않았어요.", 404, "QR_LOGIN_DISABLED");
+  const hash = (s: string) => createHash("sha256").update(s).digest();
+  const matches = timingSafeEqual(hash(key ?? ""), hash(expected));
+  return db.loginAttempt(
+    `admin-qr:${hash(address).toString("hex")}`,
+    matches,
+  );
+}
 export async function requireAdmin(cookie: string | undefined, db = database()) {
   if (!cookie || !(await db.hasAdminSession(cookie)))
     throw new AppError(

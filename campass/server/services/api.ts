@@ -5,6 +5,7 @@ import {
   assertRequestOrigin,
   database,
   loginAdmin,
+  loginAdminWithQrKey,
   ownerToken,
   readBytes,
   readJson,
@@ -65,6 +66,31 @@ async function handle(request: NextRequest) {
         maxAge: ADMIN_SESSION_SECONDS,
         expires: new Date(session.expires),
       });
+      return result;
+    }
+    if (method === "GET" && parts.join("/") === "admin/qr") {
+      // QR 입장: 성공하면 세션 쿠키를 주고, 실패해도 열쇠값이 주소창에 남지 않게 /admin으로 보낸다
+      const result = NextResponse.redirect(new URL("/admin", request.url), 303);
+      result.headers.set("Cache-Control", "no-store");
+      result.headers.set("Referrer-Policy", "no-referrer");
+      try {
+        const address =
+          request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ||
+          "unknown";
+        const session = await loginAdminWithQrKey(
+          db,
+          request.nextUrl.searchParams.get("key"),
+          address,
+        );
+        if (adminSession) await db.deleteAdminSession(adminSession);
+        result.cookies.set("campass_admin", session.id, {
+          ...adminCookieOptions,
+          maxAge: ADMIN_SESSION_SECONDS,
+          expires: new Date(session.expires),
+        });
+      } catch (error) {
+        if (!(error instanceof AppError)) throw error;
+      }
       return result;
     }
     if (method === "POST" && parts.join("/") === "admin/logout") {

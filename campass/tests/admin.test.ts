@@ -116,3 +116,28 @@ test("admin login fails closed when credentials are missing or password is too s
   process.env.ADMIN_ID = "";
   await assert.rejects(server.loginAdmin(db, credentials, "client-a"), { status: 503 });
 });
+
+test("QR key login creates a session, rejects wrong keys and stays off without a long key", async (t) => {
+  const fixture = await setup(t);
+  if (!fixture) return;
+  const db = fixture.store;
+  const previous = process.env.ADMIN_QR_KEY;
+  t.after(() => {
+    if (previous === undefined) delete process.env.ADMIN_QR_KEY;
+    else process.env.ADMIN_QR_KEY = previous;
+  });
+  for (const value of [undefined, "too-short-key"]) {
+    if (value === undefined) delete process.env.ADMIN_QR_KEY;
+    else process.env.ADMIN_QR_KEY = value;
+    await assert.rejects(server.loginAdminWithQrKey(db, value ?? "", "client-a"), { status: 404 });
+  }
+  const key = "qr-test-key-0123456789abcdef";
+  process.env.ADMIN_QR_KEY = key;
+  for (const wrong of [null, "", `${key} `, "qr-test-key-0123456789abcdeg"])
+    await assert.rejects(server.loginAdminWithQrKey(db, wrong, "client-a"), { status: 401 });
+  const session = await server.loginAdminWithQrKey(db, key, "client-a");
+  await server.requireAdmin(session.id, db);
+  for (let i = 0; i < 5; i++)
+    await assert.rejects(server.loginAdminWithQrKey(db, "wrong", "client-b"), { status: i < 4 ? 401 : 429 });
+  await assert.rejects(server.loginAdminWithQrKey(db, key, "client-b"), { status: 429 });
+});
