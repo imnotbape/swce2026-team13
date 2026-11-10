@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Lightbulb, ShieldCheck } from "lucide-react";
+import { Lightbulb, ShieldCheck } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/features/navigation/campus-provider";
 import { api, type Insight } from "@/features/navigation/campus-provider";
@@ -382,7 +383,7 @@ export default function Screen() {
                   disabled={currentPage === 0}
                   aria-label="이전 10개"
                 >
-                  <ChevronLeft size={18} aria-hidden="true" />
+                  <ChevronLeftIcon size={18} />
                 </button>
                 {pageCount <= 10 && (
                   <div className="admin-pager-dots">
@@ -408,7 +409,7 @@ export default function Screen() {
                   disabled={currentPage === pageCount - 1}
                   aria-label="다음 10개"
                 >
-                  <ChevronRight size={18} aria-hidden="true" />
+                  <ChevronRightIcon size={18} />
                 </button>
               </nav>
             )}
