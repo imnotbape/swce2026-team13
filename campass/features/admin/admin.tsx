@@ -80,6 +80,18 @@ export default function Screen() {
     setUpdatedAt(new Date());
   }
 
+  // 로그인 여부를 확인하는 동안에는 로그인 창 대신 확인 중 표시 (로그인 창이 깜빡이지 않게)
+  if (!insight && loading)
+    return (
+      <section className="content stack admin-screen" aria-busy="true">
+        <div className="row">
+          <Tag tone="gray">관리자 전용</Tag>
+        </div>
+        <h1>어디에서 많이 헷갈릴까요?</h1>
+        <p className="small" role="status">관리자 정보를 확인하고 있어요.</p>
+      </section>
+    );
+
   if (!insight)
     return (
       <section className="content stack admin-screen">
