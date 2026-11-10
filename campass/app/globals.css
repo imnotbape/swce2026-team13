@@ -6058,3 +6058,84 @@ body::-webkit-scrollbar,
     font-size: 16px;
   }
 }
+
+/* 혼란 지점 우선순위: 10개씩 넘겨 보기 */
+.admin-table-carousel {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.admin-slide-next {
+  animation: admin-slide-next 0.24s ease-out;
+}
+.admin-slide-prev {
+  animation: admin-slide-prev 0.24s ease-out;
+}
+@keyframes admin-slide-next {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes admin-slide-prev {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-slide-next,
+  .admin-slide-prev {
+    animation: none;
+  }
+}
+.admin-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.admin-pager-arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d5dce8;
+  border-radius: 50%;
+  background: white;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.admin-pager-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.admin-pager-dots {
+  display: flex;
+  gap: 6px;
+}
+.admin-pager-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #cfd6e2;
+  cursor: pointer;
+  transition: width 0.2s, background 0.2s;
+}
+.admin-pager-dots button.active {
+  width: 20px;
+  background: var(--blue);
+}
+.admin-pager-arrow:focus-visible,
+.admin-pager-dots button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.admin-pager-range {
+  min-width: 84px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.admin-pager-range small {
+  color: var(--muted);
+  font-weight: 400;
+}

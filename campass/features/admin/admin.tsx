@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Lightbulb, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lightbulb, ShieldCheck } from "lucide-react";
 import { Notice, Tag } from "@/components/ui";
 import { useCampus } from "@/features/navigation/campus-provider";
 import { api, type Insight } from "@/features/navigation/campus-provider";
@@ -25,6 +25,9 @@ const levelColors: Record<ConfusionLevel, string> = {
   "기록 부족": "#9aa1ab",
 };
 
+// 우선순위 표를 한 번에 보여 주는 지점 수
+const PAGE_SIZE = 10;
+
 const periods = [["today", "오늘"], ["7d", "최근 7일"], ["all", "전체"]] as const;
 
 // 「오전 10:18」 꼴
@@ -43,6 +46,10 @@ export default function Screen() {
   // 표·지도에서 고른 지점. 없으면 1순위
   const [selectedPoint, setSelectedPoint] = useState("");
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  // 우선순위 표 페이지(0부터)와 넘긴 방향(슬라이드 효과용)
+  const [page, setPage] = useState(0);
+  const [slide, setSlide] = useState<"next" | "prev" | "">("");
+  const touchStart = useRef<number | null>(null);
   const detailRef = useRef<HTMLElement>(null);
   const params = new URLSearchParams({ period, demo: excludeDemo ? "exclude" : "include" });
   if (building) params.set("building", building);
@@ -73,6 +80,8 @@ export default function Screen() {
   function changeFilter(change: () => void) {
     setLoading(true);
     setLoadError("");
+    setPage(0);
+    setSlide("");
     change();
   }
   async function reload() {
@@ -159,6 +168,21 @@ export default function Screen() {
   const points = insight.points;
   const selectedIndex = Math.max(0, points.findIndex((p) => p.id === selectedPoint));
   const selected: InsightPoint | undefined = points[selectedIndex];
+  const pageCount = Math.max(1, Math.ceil(points.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * PAGE_SIZE;
+  const pagePoints = points.slice(pageStart, pageStart + PAGE_SIZE);
+  function goPage(next: number) {
+    if (next < 0 || next >= pageCount || next === currentPage) return;
+    setSlide(next > currentPage ? "next" : "prev");
+    setPage(next);
+  }
+  // 지도에서 고른 지점이 다른 페이지에 있으면 그 페이지로 넘김
+  function selectPoint(pointId: string) {
+    setSelectedPoint(pointId);
+    const index = points.findIndex((p) => p.id === pointId);
+    if (index >= 0) goPage(Math.floor(index / PAGE_SIZE));
+  }
   const improvementCount = points.filter((p) => p.level === "개선 필요").length;
   // 좌표를 찾은 지점만 지도에 찍음(목록에는 모두 남김)
   const ranks: RankSpot[] = points.flatMap((p, i) => {
@@ -181,7 +205,7 @@ export default function Screen() {
 
   // 지도에서 고르면 상세가 화면 밖(모바일)일 수 있어 상세로 스크롤
   function showOnMap(pointId: string) {
-    setSelectedPoint(pointId);
+    selectPoint(pointId);
     detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -291,6 +315,18 @@ export default function Screen() {
             {points.length === 0 ? (
               <Notice>선택한 조건에 해당하는 안내 기록이 없어요.</Notice>
             ) : (
+              <div
+                className="admin-table-carousel"
+                onTouchStart={(e) => {
+                  touchStart.current = e.touches[0].clientX;
+                }}
+                onTouchEnd={(e) => {
+                  if (touchStart.current === null) return;
+                  const dx = e.changedTouches[0].clientX - touchStart.current;
+                  touchStart.current = null;
+                  if (Math.abs(dx) > 48) goPage(currentPage + (dx < 0 ? 1 : -1));
+                }}
+              >
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -303,8 +339,9 @@ export default function Screen() {
                     <th scope="col">수준</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {points.map((p, i) => {
+                <tbody key={currentPage} className={slide ? `admin-slide-${slide}` : undefined}>
+                  {pagePoints.map((p, pageIndex) => {
+                    const i = pageStart + pageIndex;
                     const on = i === selectedIndex;
                     const place = insightPointBuilding(p.id);
                     return (
@@ -334,6 +371,46 @@ export default function Screen() {
                   })}
                 </tbody>
               </table>
+              </div>
+            )}
+            {pageCount > 1 && (
+              <nav className="admin-pager" aria-label="우선순위 페이지">
+                <button
+                  type="button"
+                  className="admin-pager-arrow"
+                  onClick={() => goPage(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  aria-label="이전 10개"
+                >
+                  <ChevronLeft size={18} aria-hidden="true" />
+                </button>
+                {pageCount <= 10 && (
+                  <div className="admin-pager-dots">
+                    {Array.from({ length: pageCount }, (_, n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className={n === currentPage ? "active" : ""}
+                        aria-current={n === currentPage ? "page" : undefined}
+                        aria-label={`${n * PAGE_SIZE + 1}~${Math.min((n + 1) * PAGE_SIZE, points.length)}위`}
+                        onClick={() => goPage(n)}
+                      />
+                    ))}
+                  </div>
+                )}
+                <span className="admin-pager-range" aria-live="polite">
+                  {pageStart + 1}–{pageStart + pagePoints.length}위 <small>/ {points.length}곳</small>
+                </span>
+                <button
+                  type="button"
+                  className="admin-pager-arrow"
+                  onClick={() => goPage(currentPage + 1)}
+                  disabled={currentPage === pageCount - 1}
+                  aria-label="다음 10개"
+                >
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
+              </nav>
             )}
             <p className="small muted">
               제출된 피드백 {insight.feedbacks}건 · 수동 도착 확인 기준 · 사람을 알아볼 수 있는 정보는 모으지 않아요
@@ -398,7 +475,7 @@ export default function Screen() {
               </div>
             )}
             <div className="admin-detail-map">
-              <CampusOverviewMap backgroundOnly ranks={ranks} selectedRank={selected.id} onRank={setSelectedPoint} height={260} />
+              <CampusOverviewMap backgroundOnly ranks={ranks} selectedRank={selected.id} onRank={selectPoint} height={260} />
             </div>
           </aside>
         )}
